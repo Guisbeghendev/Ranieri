@@ -12,19 +12,17 @@ use App\Models\Gallery;
 use App\Models\Image;
 use Exception;
 use Illuminate\Support\Str;
-use Log; // Importação correta para a facade Log
+use Log;
 
 class ProcessImageWithGd implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    // A propriedade agora é 'tempRelativePath' para refletir EXATAMENTE o que é passado pelo Controller.
     protected string $tempRelativePath;
     protected int $galleryId;
     protected string $originalFileName;
     protected ?string $watermarkFile;
 
-    // O construtor agora recebe o caminho relativo COMPLETO diretamente.
     public function __construct(string $tempRelativePath, int $galleryId, string $originalFileName, ?string $watermarkFile = null)
     {
         $this->tempRelativePath = $tempRelativePath;
@@ -35,32 +33,33 @@ class ProcessImageWithGd implements ShouldQueue
 
     public function handle(): void
     {
-        $diskLocal = Storage::disk('local');   // Disco 'local' para o arquivo temporário
-        $diskPublic = Storage::disk('public'); // Disco 'public' para o destino final dos arquivos processados
+        $diskLocal = Storage::disk('local');
+        $diskPublic = Storage::disk('public');
+
+        // PREFIXO DE PASTA ALTERADO DE 'galleries' PARA 'album'
+        $baseImagePath = 'album/' . $this->galleryId;
+        $baseWatermarkPath = 'album/' . $this->galleryId . '/watermarked';
+        $baseThumbPath = 'album/' . $this->galleryId . '/thumbs';
+
 
         try {
-            // Verifica se o arquivo temporário existe no disco 'local' usando o caminho relativo recebido
             if (!$diskLocal->exists($this->tempRelativePath)) {
-                // Se o arquivo não existir, o job simplesmente retorna.
                 Log::warning("ProcessImageWithGd Job: Arquivo temporário não encontrado no disco 'local' para o caminho: {$this->tempRelativePath}. Pulando.");
                 return;
             }
 
             $gallery = Gallery::find($this->galleryId);
             if (!$gallery) {
-                // Se a galeria não for encontrada, deleta o arquivo temporário e retorna.
                 Log::error("ProcessImageWithGd Job: Galeria não encontrada (ID: {$this->galleryId}). Deletando arquivo temporário: {$this->tempRelativePath}.");
                 $diskLocal->delete($this->tempRelativePath);
                 return;
             }
 
-            // Lê o conteúdo da imagem do caminho relativo no disco 'local'
             $imageContent = $diskLocal->get($this->tempRelativePath);
 
-            // --- Gerar nomes de arquivo únicos e slugs para armazenamento ---
             $uuid = Str::uuid();
             $originalSlug = Str::slug(pathinfo($this->originalFileName, PATHINFO_FILENAME));
-            $extension = pathinfo($this->originalFileName, PATHINFO_EXTENSION); // Usar a extensão do nome original
+            $extension = pathinfo($this->originalFileName, PATHINFO_EXTENSION);
 
             $finalOriginalName = $uuid . '_' . $originalSlug . '.' . $extension;
             $finalThumbName = $uuid . '_' . $originalSlug . '_thumb.' . $extension;
@@ -69,7 +68,6 @@ class ProcessImageWithGd implements ShouldQueue
             $watermarkApplied = false;
             $watermarkedStoragePath = null;
 
-            // --- Processamento da Imagem Original/Principal com GD ---
             $imgOriginal = imagecreatefromstring($imageContent);
             if (!$imgOriginal) {
                 throw new Exception("Não foi possível criar imagem a partir do string para o original. Formato inválido?");
@@ -100,10 +98,10 @@ class ProcessImageWithGd implements ShouldQueue
             imagedestroy($imgOriginal);
 
             // --- SALVAR A IMAGEM ORIGINAL (SEM MARCA D'ÁGUA) ---
-            $originalStoragePath = 'galleries/' . $gallery->id . '/' . $finalOriginalName;
+            $diskPublic->makeDirectory($baseImagePath); // Garante que a pasta exista
             ob_start();
             imagejpeg($resizedImage, null, 80);
-            $diskPublic->put($originalStoragePath, ob_get_clean()); // Salva o caminho RELATIVO no disco 'public'
+            $diskPublic->put($originalStoragePath, ob_get_clean());
 
 
             // --- Processamento e Aplicação da Marca D'água ---
@@ -137,7 +135,7 @@ class ProcessImageWithGd implements ShouldQueue
                         imagecopy($watermarkedImage, $scaledWatermark, $destX, $destY, 0, 0, $scaledWatermarkWidth, $scaledWatermarkHeight);
                         imagedestroy($scaledWatermark);
 
-                        $watermarkedStoragePath = 'galleries/' . $gallery->id . '/watermarked/' . $finalWatermarkedName;
+                        $diskPublic->makeDirectory($baseWatermarkPath); // Garante que a pasta exista
                         ob_start();
                         imagejpeg($watermarkedImage, null, 80);
                         $diskPublic->put($watermarkedStoragePath, ob_get_clean());
@@ -152,7 +150,7 @@ class ProcessImageWithGd implements ShouldQueue
 
             // --- Gerar Thumbnail ---
             $thumbWidth = 300;
-            $thumbHeight = 200; // Altura fixa para thumbnails
+            $thumbHeight = 200;
 
             $srcRatio = $newWidth / $newHeight;
             $targetRatio = $thumbWidth / $thumbHeight;
@@ -162,10 +160,10 @@ class ProcessImageWithGd implements ShouldQueue
             $srcW = $newWidth;
             $srcH = $newHeight;
 
-            if ($srcRatio > $targetRatio) { // Imagem original mais larga que o thumbnail
+            if ($srcRatio > $targetRatio) {
                 $srcW = $newHeight * $targetRatio;
                 $srcX = ($newWidth - $srcW) / 2;
-            } else { // Imagem original mais alta ou igual que o thumbnail
+            } else {
                 $srcH = $newWidth / $targetRatio;
                 $srcY = ($newHeight - $srcH) / 2;
             }
@@ -178,12 +176,12 @@ class ProcessImageWithGd implements ShouldQueue
                 imagefilledrectangle($thumb, 0, 0, $thumbWidth, $thumbHeight, $transparent);
             }
             imagecopyresampled($thumb, $resizedImage, 0, 0, (int)$srcX, (int)$srcY, $thumbWidth, $thumbHeight, (int)$srcW, (int)$srcH);
-            imagedestroy($resizedImage); // Libera memória da imagem redimensionada
+            imagedestroy($resizedImage);
 
-            $thumbStoragePath = 'galleries/' . $gallery->id . '/thumbs/' . $finalThumbName; // Criando pasta 'thumbs'
+            $diskPublic->makeDirectory($baseThumbPath); // Garante que a pasta exista
             ob_start();
             imagejpeg($thumb, null, 80);
-            $diskPublic->put($thumbStoragePath, ob_get_clean()); // Salva o caminho RELATIVO
+            $diskPublic->put($thumbStoragePath, ob_get_clean());
             imagedestroy($thumb);
 
 
@@ -193,7 +191,7 @@ class ProcessImageWithGd implements ShouldQueue
             $image->original_file_name = $this->originalFileName;
             $image->path_original = $originalStoragePath;
             $image->path_thumb = $thumbStoragePath;
-            $image->watermark_applied = $watermarkApplied; // Define se a marca d'água foi aplicada
+            $image->watermark_applied = $watermarkApplied;
             $image->metadata = [
                 'original_width' => $originalWidth,
                 'original_height' => $originalHeight,
@@ -208,9 +206,8 @@ class ProcessImageWithGd implements ShouldQueue
 
         } catch (Exception $e) {
             Log::error("ProcessImageWithGd Job: Falha ao processar imagem '{$this->originalFileName}' para galeria {$this->galleryId}: " . $e->getMessage() . " na linha " . $e->getLine() . " em " . $e->getFile());
-            $this->fail($e); // Marca o Job como falho explicitamente
+            $this->fail($e);
         } finally {
-            // Deleta o arquivo temporário do disco 'local' no final, independente do sucesso ou falha
             try {
                 if ($diskLocal->exists($this->tempRelativePath)) {
                     $diskLocal->delete($this->tempRelativePath);
