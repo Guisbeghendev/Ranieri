@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    'driver' => env('SESSION_DRIVER', 'file'), // <--- AGORA ESTÁ 'file' AQUI!
 
     /*
     |--------------------------------------------------------------------------
@@ -213,5 +213,19 @@ return [
     */
 
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted Proxies
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure the IP addresses of trusted proxies that are
+    | in front of your application. These can be useful if you have a
+    | load balancer or other proxy in front of your application.
+    |
+    | See: https://symfony.com/doc/current/components/http_foundation.html#trusted-proxies
+    |
+    */
+    'proxies' => env('TRUSTED_PROXIES', null), // <--- AGORA ESTÁ AQUI NO FINAL!
 
 ];
