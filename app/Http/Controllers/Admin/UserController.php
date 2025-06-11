@@ -130,7 +130,8 @@ class UserController extends Controller
             $user->groups()->sync($request->input('groups', []));
 
             DB::commit();
-            return redirect()->route('admin.users.index')->with('success', 'Usuário criado com sucesso!');
+            // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após POST.
+            return redirect()->route('admin.users.index')->with('success', 'Usuário criado com sucesso!')->withStatus(303);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao criar usuário: ' . $e->getMessage(), ['exception' => $e]);
@@ -265,7 +266,8 @@ class UserController extends Controller
             $user->groups()->sync($request->input('groups', []));
 
             DB::commit();
-            return redirect()->route('admin.users.index')->with('success', 'Usuário atualizado com sucesso!');
+            // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após PUT/PATCH.
+            return redirect()->route('admin.users.index')->with('success', 'Usuário atualizado com sucesso!')->withStatus(303);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao atualizar usuário: ' . $e->getMessage(), ['exception' => $e]);
@@ -295,7 +297,8 @@ class UserController extends Controller
             // O Avatar também será excluído via cascade se a foreign key estiver bem configurada.
             $user->delete();
             DB::commit();
-            return redirect()->route('admin.users.index')->with('success', 'Usuário excluído com sucesso!');
+            // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após DELETE.
+            return redirect()->route('admin.users.index')->with('success', 'Usuário excluído com sucesso!')->withStatus(303);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao excluir usuário: ' . $e->getMessage(), ['exception' => $e]);
@@ -383,7 +386,8 @@ class UserController extends Controller
                 }
             }
             DB::commit();
-            return redirect()->back()->with('success', 'Papéis associados aos usuários com sucesso!');
+            // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após POST.
+            return redirect()->back()->with('success', 'Papéis associados aos usuários com sucesso!')->withStatus(303);
         } catch (\Exception $e) {
             DB::rollBack();
             // Logar o erro para depuração
@@ -461,7 +465,8 @@ class UserController extends Controller
                 }
             }
             DB::commit();
-            return redirect()->back()->with('success', 'Grupos associados aos usuários com sucesso!');
+            // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após POST.
+            return redirect()->back()->with('success', 'Grupos associados aos usuários com sucesso!')->withStatus(303);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao associar grupos em massa: ' . $e->getMessage(), ['exception' => $e]);

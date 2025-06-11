@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'file'), // <--- AGORA ESTÁ 'file' AQUI!
+    'driver' => env('SESSION_DRIVER', 'file'),
 
     /*
     |--------------------------------------------------------------------------
@@ -226,6 +226,6 @@ return [
     | See: https://symfony.com/doc/current/components/http_foundation.html#trusted-proxies
     |
     */
-    'proxies' => env('TRUSTED_PROXIES', null), // <--- AGORA ESTÁ AQUI NO FINAL!
+    'proxies' => env('TRUSTED_PROXIES', null),
 
 ];

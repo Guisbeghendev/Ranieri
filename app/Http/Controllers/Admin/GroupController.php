@@ -51,7 +51,8 @@ class GroupController extends Controller
             'description' => $request->description,
         ]);
 
-        return redirect()->route('admin.groups.index')->with('success', 'Grupo criado com sucesso!');
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após POST.
+        return redirect()->route('admin.groups.index')->with('success', 'Grupo criado com sucesso!')->withStatus(303);
     }
 
     /**
@@ -92,7 +93,8 @@ class GroupController extends Controller
             'description' => $request->description,
         ]);
 
-        return redirect()->route('admin.groups.index')->with('success', 'Grupo atualizado com sucesso!');
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após PUT/PATCH.
+        return redirect()->route('admin.groups.index')->with('success', 'Grupo atualizado com sucesso!')->withStatus(303);
     }
 
     /**
@@ -102,6 +104,7 @@ class GroupController extends Controller
     {
         $group->delete();
 
-        return redirect()->route('admin.groups.index')->with('success', 'Grupo excluído com sucesso!');
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após DELETE.
+        return redirect()->route('admin.groups.index')->with('success', 'Grupo excluído com sucesso!')->withStatus(303);
     }
 }

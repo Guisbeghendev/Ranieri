@@ -137,8 +137,8 @@ class ProfileController extends Controller
         ]));
         $profile->save(); // Salva o perfil no banco de dados
 
-        // Redireciona de volta para a página de edição do perfil com uma mensagem de sucesso
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após PATCH.
+        return Redirect::route('profile.edit')->with('status', 'profile-updated')->withStatus(303);
     }
 
     /**
@@ -159,6 +159,7 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return Redirect::to('/');
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após DELETE.
+        return Redirect::to('/')->withStatus(303);
     }
 }

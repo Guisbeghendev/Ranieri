@@ -99,6 +99,10 @@ class GalleryController extends Controller
 
         $gallery->groups()->attach($validated['selected_group_ids']);
 
+        // CORREÇÃO: Respostas JSON para Inertia geralmente não precisam de ->withStatus(303)
+        // O Inertia.js lida com respostas JSON automaticamente.
+        // O erro 419 ocorre com redirecionamentos HTTP 302.
+        // Este método já retorna JSON, então não requer a mudança.
         return response()->json([
             'success_message' => 'Galeria "' . $gallery->title . '" criada com sucesso!',
             'gallery_id' => $gallery->id
@@ -153,6 +157,8 @@ class GalleryController extends Controller
         // Passa o CAMINHO RELATIVO do arquivo temporário para o job
         ProcessImageWithGd::dispatch($tempRelativePath, (int) $gallery->id, $originalFileName, $watermarkFile);
 
+        // CORREÇÃO: Este método já retorna JSON. Redirecionamentos HTTP 302 causam 419 no Inertia.
+        // Retornar JSON (como já está) é a forma correta para o Inertia.js.
         return response()->json(['success' => true, 'message' => 'Imagem enfileirada para processamento!']);
     }
 
@@ -192,8 +198,9 @@ class GalleryController extends Controller
         $gallery->save();
         $gallery->groups()->sync($validated['selected_group_ids']);
 
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após PUT.
         return redirect()->route('fotografo.dashboard')
-            ->with('success', 'Galeria atualizada com sucesso!');
+            ->with('success', 'Galeria atualizada com sucesso!')->withStatus(303);
     }
 
     /**
@@ -236,8 +243,9 @@ class GalleryController extends Controller
         // Storage::disk('public')->deleteDirectory('galleries/' . $gallery->id); // Deleta a pasta da galeria
 
         $gallery->delete();
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após DELETE.
         return redirect()->route('fotografo.galleries.index')
-            ->with('success', 'Galeria excluída com sucesso.');
+            ->with('success', 'Galeria excluída com sucesso.')->withStatus(303);
     }
 
     /**
@@ -279,8 +287,9 @@ class GalleryController extends Controller
         // Deleta o registro da imagem no banco de dados
         $image->delete();
 
+        // CORREÇÃO: Adicionado ->withStatus(303) para que o Inertia.js lide corretamente com o redirecionamento após DELETE.
         return redirect()->back()
-            ->with('success', 'Imagem excluída com sucesso!');
+            ->with('success', 'Imagem excluída com sucesso!')->withStatus(303);
     }
 
 
